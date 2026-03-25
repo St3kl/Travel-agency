@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, CreditCard, Calendar, Users, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,10 @@ export default function BookPage() {
     email: "",
     notes: "",
   });
+
+  // In a real application, the booking ID would be generated on the server.
+  // We use a static value here to comply with React purity rules during the showcase.
+  const bookingId = "EK-842931";
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -132,7 +136,7 @@ export default function BookPage() {
                 <button
                   onClick={nextStep}
                   disabled={!bookingData.destination || !bookingData.experience || !bookingData.date}
-                  className="w-full py-4 bg-navy text-white rounded-lg font-bold hover:bg-navy/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue to Personal Details
                 </button>
@@ -197,14 +201,14 @@ export default function BookPage() {
                 <div className="flex gap-4">
                   <button
                     onClick={prevStep}
-                    className="flex-1 py-4 border border-navy text-navy rounded-lg font-bold hover:bg-navy/5 transition-all"
+                    className="flex-1 py-4 border border-navy text-navy rounded-md font-bold hover:bg-navy/5 transition-all"
                   >
                     Back
                   </button>
                   <button
                     onClick={nextStep}
                     disabled={!bookingData.name || !bookingData.email}
-                    className="flex-[2] py-4 bg-navy text-white rounded-lg font-bold hover:bg-navy/90 transition-all disabled:opacity-50"
+                    className="flex-[2] btn-primary disabled:opacity-50"
                   >
                     Proceed to Payment
                   </button>
@@ -258,14 +262,14 @@ export default function BookPage() {
                 <div className="flex gap-4 pt-4">
                   <button
                     onClick={prevStep}
-                    className="flex-1 py-4 border border-navy text-navy rounded-lg font-bold hover:bg-navy/5 transition-all"
+                    className="flex-1 py-4 border border-navy text-navy rounded-md font-bold hover:bg-navy/5 transition-all"
                   >
                     Back
                   </button>
                   <button
                     onClick={simulatePayment}
                     disabled={isProcessing}
-                    className="flex-[2] py-4 bg-navy text-white rounded-lg font-bold hover:bg-navy/90 transition-all flex items-center justify-center"
+                    className="flex-[2] btn-primary flex items-center justify-center"
                   >
                     {isProcessing ? (
                       <>
@@ -292,7 +296,7 @@ export default function BookPage() {
                 </div>
                 <h2 className="text-3xl font-bold text-navy mb-4">Booking Confirmed!</h2>
                 <p className="text-navy/60 text-lg mb-8 max-w-md mx-auto">
-                  Thank you, {bookingData.name.split(' ')[0]}! We've sent a confirmation email to {bookingData.email}. Our travel experts will contact you within 24 hours to finalize your itinerary.
+                  Thank you, {bookingData.name.split(" ")[0]}! We&apos;ve sent a confirmation email to {bookingData.email}. Our travel experts will contact you within 24 hours to finalize your itinerary.
                 </p>
                 <div className="bg-off-white p-6 rounded-lg text-left mb-10">
                   <h3 className="font-bold text-navy mb-4 uppercase tracking-wider text-xs">Summary</h3>
@@ -311,13 +315,13 @@ export default function BookPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-navy/60">Booking ID</span>
-                      <span className="font-bold text-gold">EK-{Math.floor(100000 + Math.random() * 900000)}</span>
+                      <span className="font-bold text-gold">{bookingId}</span>
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => window.location.href = "/"}
-                  className="bg-navy text-white px-10 py-4 rounded-lg font-bold hover:bg-navy/90 transition-all"
+                  className="btn-primary"
                 >
                   Return to Home
                 </button>

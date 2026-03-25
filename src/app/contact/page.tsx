@@ -27,7 +27,7 @@ export default function ContactPage() {
             Get in Touch
           </motion.h1>
           <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto font-light">
-            We're here to help you plan your next extraordinary journey.
+            We&apos;re here to help you plan your next extraordinary journey.
           </p>
         </div>
       </section>
@@ -132,7 +132,7 @@ export default function ContactPage() {
                   <label className="text-xs font-bold text-navy/70 uppercase tracking-widest">Message</label>
                   <textarea rows={5} className="w-full p-4 bg-white border border-gray-100 rounded-lg outline-none focus:ring-1 focus:ring-gold resize-none" />
                 </div>
-                <button className="w-full py-5 bg-navy text-white font-bold rounded-lg hover:bg-navy/90 transition-all shadow-xl">
+                <button className="btn-primary w-full py-5">
                   Send Message
                 </button>
               </form>

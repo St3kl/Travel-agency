@@ -95,13 +95,13 @@ export default function Home() {
           >
             <Link 
               href="/experiences" 
-              className="bg-gold hover:bg-gold-light text-navy px-8 py-4 rounded-sm font-semibold transition-all duration-300 w-full md:w-auto text-center"
+              className="btn-primary w-full md:w-auto text-center"
             >
               Explore Our Destinations
             </Link>
             <Link 
               href="/book" 
-              className="border border-white/30 hover:bg-white hover:text-navy text-white px-8 py-4 rounded-sm font-semibold transition-all duration-300 w-full md:w-auto text-center backdrop-blur-sm"
+              className="btn-outline-white w-full md:w-auto text-center"
             >
               Book Your Trip
             </Link>
@@ -199,7 +199,7 @@ export default function Home() {
             ))}
           </div>
           <div className="mt-20 text-center">
-            <Link href="/experiences" className="bg-gold text-navy px-10 py-4 rounded-sm font-bold hover:bg-gold-light transition-colors inline-block">
+            <Link href="/experiences" className="btn-primary inline-block">
               View All Services
             </Link>
           </div>
@@ -216,10 +216,10 @@ export default function Home() {
             Contact our travel experts today and let us craft a personalized experience that exceeds your expectations.
           </p>
           <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-            <Link href="/book" className="bg-navy text-white px-10 py-4 rounded-sm font-bold hover:bg-navy/90 transition-all shadow-xl w-full md:w-auto">
+            <Link href="/book" className="btn-primary w-full md:w-auto shadow-xl">
               Plan Your Experience
             </Link>
-            <Link href="/contact" className="border-2 border-navy text-navy px-10 py-[14px] rounded-sm font-bold hover:bg-navy hover:text-white transition-all w-full md:w-auto">
+            <Link href="/contact" className="btn-secondary w-full md:w-auto">
               Get in Touch
             </Link>
           </div>

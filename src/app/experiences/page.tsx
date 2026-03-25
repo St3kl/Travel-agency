@@ -112,13 +112,13 @@ export default function ExperiencesPage() {
                 <div className="flex flex-wrap gap-4">
                   <Link
                     href="/book"
-                    className="bg-gold hover:bg-gold-light text-navy px-8 py-3 rounded-sm font-bold transition-all"
+                    className="btn-primary"
                   >
                     Inquire Now
                   </Link>
                   <Link
                     href="/contact"
-                    className="border border-navy text-navy hover:bg-navy hover:text-white px-8 py-3 rounded-sm font-bold transition-all"
+                    className="btn-secondary"
                   >
                     View Packages
                   </Link>

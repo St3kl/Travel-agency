@@ -69,13 +69,13 @@ export default function AboutPage() {
               <h2 className="text-4xl font-bold mt-4 mb-8 text-navy">Global Brand, Local Expertise</h2>
               <div className="space-y-6 text-navy/70 text-lg leading-relaxed">
                 <p>
-                  Ekeon Group was founded on a simple yet powerful vision: to bridge the gap between discerning international travelers and the world's most authentic, premium experiences.
+                  Ekeon Group was founded on a simple yet powerful vision: to bridge the gap between discerning international travelers and the world&apos;s most authentic, premium experiences.
                 </p>
                 <p>
                   As a global brand, we leverage our international presence to understand the needs of travelers from Europe, North America, Asia, and Africa. However, our heart beats with local knowledge.
                 </p>
                 <p>
-                  We believe that the best travel experiences are those that are deeply rooted in local culture and expertise. That's why we've built a network of trusted local partners who share our commitment to excellence and authenticity.
+                  We believe that the best travel experiences are those that are deeply rooted in local culture and expertise. That&apos;s why we&apos;ve built a network of trusted local partners who share our commitment to excellence and authenticity.
                 </p>
               </div>
               
@@ -142,7 +142,7 @@ export default function AboutPage() {
                 </p>
                 <div className="bg-navy/5 border-l-4 border-gold p-6 rounded-r-lg">
                   <p className="italic text-navy font-medium">
-                    "We don't just sell trips; we curate life-changing moments through meaningful global connections."
+                    &quot;We don&apos;t just sell trips; we curate life-changing moments through meaningful global connections.&quot;
                   </p>
                 </div>
               </div>

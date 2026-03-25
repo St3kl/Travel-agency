@@ -72,7 +72,7 @@ export default function DestinationsPage() {
             Our Destinations
           </motion.h1>
           <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto font-light">
-            Exploring the world's most extraordinary corners, one journey at a time.
+            Exploring the world&apos;s most extraordinary corners, one journey at a time.
           </p>
         </div>
       </section>
@@ -126,7 +126,7 @@ export default function DestinationsPage() {
                   
                   <Link
                     href="/book"
-                    className="inline-flex items-center justify-center bg-white text-navy px-6 py-3 rounded-sm font-bold hover:bg-gold hover:text-navy transition-all group/btn"
+                    className="inline-flex items-center justify-center bg-white text-navy px-6 py-3 rounded-md font-bold hover:bg-gold transition-all group/btn"
                   >
                     Explore Packages <ArrowUpRight className="ml-2 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
                   </Link>
@@ -142,11 +142,11 @@ export default function DestinationsPage() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-navy mb-8">Looking for something specific?</h2>
           <p className="text-navy/70 text-lg mb-12 leading-relaxed">
-            Our global network of local partners allows us to organize bespoke travel experiences in almost any corner of the globe. If you don't see your desired destination here, contact us for a custom proposal.
+            Our global network of local partners allows us to organize bespoke travel experiences in almost any corner of the globe. If you don&apos;t see your desired destination here, contact us for a custom proposal.
           </p>
           <Link
             href="/contact"
-            className="bg-navy text-white px-10 py-4 rounded-sm font-bold hover:bg-navy/90 transition-all shadow-xl"
+            className="btn-primary"
           >
             Request Custom Destination
           </Link>

@@ -75,7 +75,7 @@ export default function PartnerPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <div>
-              <h2 className="text-4xl font-bold mb-8">Let's Grow Together</h2>
+              <h2 className="text-4xl font-bold mb-8">Let&apos;s Grow Together</h2>
               <p className="text-white/60 text-lg mb-10 leading-relaxed">
                 Interested in becoming an Ekeon Group partner? Fill out the form, and our partnership development team will be in touch to discuss potential collaboration models.
               </p>
@@ -124,7 +124,7 @@ export default function PartnerPage() {
                   <label className="text-xs font-bold text-navy/70 uppercase tracking-widest">Brief Message</label>
                   <textarea rows={4} className="w-full p-3 bg-off-white border border-gray-100 rounded text-navy outline-none focus:ring-1 focus:ring-gold resize-none" />
                 </div>
-                <button className="w-full py-4 bg-gold text-navy font-bold rounded hover:bg-gold-light transition-all">
+                <button className="btn-primary w-full">
                   Submit Partnership Inquiry
                 </button>
               </form>

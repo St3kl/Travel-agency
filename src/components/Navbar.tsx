@@ -2,25 +2,15 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-function cn(...inputs: any[]): string {
-  return inputs
-    .flat()
-    .filter(Boolean)
-    .map((input) => {
-      if (typeof input === "string") return input;
-      if (typeof input === "object" && input !== null) {
-        return Object.keys(input).filter((key) => input[key]).join(" ");
-      }
-      return "";
-    })
-    .join(" ");
-}
+import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +19,8 @@ const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const isHomePage = pathname === "/";
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -44,7 +36,7 @@ const Navbar = () => {
     <nav
       className={cn(
         "fixed w-full z-50 transition-all duration-300 px-6 py-4",
-        scrolled ? "bg-navy/95 backdrop-blur-md shadow-lg" : "bg-navy"
+        scrolled || !isHomePage ? "bg-navy shadow-lg" : "bg-transparent"
       )}
     >
       <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -61,9 +53,9 @@ const Navbar = () => {
               key={link.name}
               href={link.href}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-gold",
+                "text-sm font-medium transition-colors hover:text-gold px-3 py-2 rounded-md",
                 link.highlight
-                  ? "bg-gold text-navy px-4 py-2 rounded-sm hover:bg-gold-light"
+                  ? "bg-gold text-navy hover:bg-gold-light shadow-sm"
                   : "text-white/90"
               )}
             >
@@ -100,8 +92,10 @@ const Navbar = () => {
                   href={link.href}
                   onClick={() => setIsOpen(false)}
                   className={cn(
-                    "text-lg font-medium",
-                    link.highlight ? "text-gold" : "text-white"
+                    "text-lg font-medium py-2 px-4 rounded-md transition-all",
+                    link.highlight 
+                      ? "bg-gold text-navy text-center" 
+                      : "text-white hover:bg-white/10"
                   )}
                 >
                   {link.name}
