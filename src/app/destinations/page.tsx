@@ -23,7 +23,7 @@ const destinations = [
   {
     country: "Thailand",
     region: "Asia",
-    image: "https://images.unsplash.com/photo-1528181304800-2f140819898f?q=80&w=2070&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=2070&auto=format&fit=crop",
     highlights: ["Chiang Mai", "Phuket & Islands", "Bangkok", "Ayutthaya"],
     description: "Exotic temples, pristine beaches, and some of the world's most welcoming hospitality."
   },
@@ -57,7 +57,7 @@ export default function DestinationsPage() {
       <section className="relative h-[40vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            src="https://images.unsplash.com/photo-1436491865332-7a61a109c0f2?q=80&w=2070&auto=format&fit=crop"
+            src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop"
             alt="Global Destinations"
             fill
             className="object-cover brightness-50"
@@ -69,7 +69,7 @@ export default function DestinationsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-5xl md:text-7xl text-white font-bold mb-4"
           >
-            Our Destinations
+            Global Destinations
           </motion.h1>
           <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto font-light">
             Exploring the world&apos;s most extraordinary corners, one journey at a time.

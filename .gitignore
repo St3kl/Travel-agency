@@ -29,6 +29,18 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.cloudflared.log
+.next-dev.log
+.next-dev.err.log
+
+# local app runtime data
+/data/admin-users.json
+/data/monthly-visits.json
+/data/reservations.json
+/data/mail-previews/
+/data/inquiry-mail-previews/
+/data/partner-mail-previews/
+/data/whatsapp-previews/
 
 # env files (can opt-in for committing if needed)
 .env*
