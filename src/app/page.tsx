@@ -8,8 +8,8 @@ import { ArrowRight, Globe, Shield, Star, Users } from "lucide-react";
 export default function Home() {
   const featuredDestinations = [
     {
-      title: "South Africa",
-      description: "Luxury safaris and breathtaking landscapes.",
+      title: "Africa",
+      description: "Luxury safaris, iconic landscapes, and unforgettable wildlife journeys.",
       image: "https://images.unsplash.com/photo-1516426122078-c23e76319801?q=80&w=2068&auto=format&fit=crop",
     },
     {
@@ -20,7 +20,7 @@ export default function Home() {
     {
       title: "Asia",
       description: "Exotic adventures and ancient traditions.",
-      image: "https://images.unsplash.com/photo-1528181304800-2f140819898f?q=80&w=2070&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=2070&auto=format&fit=crop",
     },
   ];
 
@@ -135,7 +135,7 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-4">
                 <div className="relative h-64 rounded-lg overflow-hidden shadow-2xl">
-                  <Image src="https://images.unsplash.com/photo-1512100356956-c1227c331f01?q=80&w=1000&auto=format&fit=crop" alt="Travel 1" fill className="object-cover" />
+                  <Image src="https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=1000&auto=format&fit=crop" alt="Travel 1" fill className="object-cover" />
                 </div>
                 <div className="relative h-48 rounded-lg overflow-hidden shadow-xl">
                   <Image src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop" alt="Travel 2" fill className="object-cover" />

@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { Mail, Phone, MapPin, Globe, Camera, Send, Briefcase } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
+
+import SocialLinks from "@/components/SocialLinks";
+import { CONTACT_EMAIL, CONTACT_WHATSAPP, CONTACT_WHATSAPP_URL } from "@/lib/contact";
 
 const Footer = () => {
   return (
@@ -14,20 +17,7 @@ const Footer = () => {
             <p className="text-white/60 text-sm leading-relaxed">
               Connecting travelers worldwide to premium, authentic experiences. One world, Infinite experience.
             </p>
-            <div className="flex space-x-4">
-              <Link href="#" className="text-white/60 hover:text-gold transition-colors">
-                <Camera size={20} />
-              </Link>
-              <Link href="#" className="text-white/60 hover:text-gold transition-colors">
-                <Globe size={20} />
-              </Link>
-              <Link href="#" className="text-white/60 hover:text-gold transition-colors">
-                <Send size={20} />
-              </Link>
-              <Link href="#" className="text-white/60 hover:text-gold transition-colors">
-                <Briefcase size={20} />
-              </Link>
-            </div>
+            <SocialLinks variant="dark" />
           </div>
 
           {/* Quick Links */}
@@ -64,18 +54,18 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <Phone size={18} className="text-gold shrink-0" />
-                <span className="text-white/60">+1 (234) 567-890</span>
+                <Link href={CONTACT_WHATSAPP_URL} className="text-white/60 hover:text-white transition-colors">{CONTACT_WHATSAPP}</Link>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail size={18} className="text-gold shrink-0" />
-                <span className="text-white/60">info@ekeongroup.com</span>
+                <Link href={`mailto:${CONTACT_EMAIL}`} className="text-white/60 hover:text-white transition-colors">{CONTACT_EMAIL}</Link>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 text-xs text-white/40">
-          <p>© {new Date().getFullYear()} Ekeon Group. All rights reserved.</p>
+          <p>Copyright {new Date().getFullYear()} Ekeon Group. All rights reserved.</p>
           <div className="flex space-x-6">
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
@@ -88,3 +78,4 @@ const Footer = () => {
 };
 
 export default Footer;
+

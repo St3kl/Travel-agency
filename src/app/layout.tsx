@@ -3,6 +3,7 @@ import { Montserrat, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MonthlyVisitsTracker from "@/components/MonthlyVisitsTracker";
 
 const montserrat = Montserrat({
   variable: "--font-sans",
@@ -29,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${montserrat.variable} ${playfair.variable} h-full antialiased scroll-smooth`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col font-sans selection:bg-gold/30 selection:text-navy" suppressHydrationWarning>
+        <MonthlyVisitsTracker />
         <Navbar />
         <main className="flex-grow">
           {children}

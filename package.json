@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "admin:create-user": "node scripts/create-admin-user.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -13,13 +14,17 @@
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.475.0",
     "next": "16.2.1",
+    "nodemailer": "^8.0.4",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
