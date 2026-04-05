@@ -66,6 +66,8 @@ create table if not exists public.monthly_visits (
 create or replace function public.increment_monthly_visits(target_month_key text)
 returns table (month_key text, count integer)
 language plpgsql
+security invoker
+set search_path = public
 as $$
 begin
   insert into public.monthly_visits (month_key, count, updated_at)
