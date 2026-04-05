@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 
+import {
+  initialArchiveExportActionState,
+  sendArchiveExportEmailAction,
+} from "@/app/admin/archive/actions";
 import {
   deleteArchivedReservationAction,
   setReservationArchivedAction,
@@ -24,6 +28,10 @@ export function ArchivedRequestsBoard({
 }: {
   items: ArchivedRequestItem[];
 }) {
+  const [exportState, exportFormAction, isExportSending] = useActionState(
+    sendArchiveExportEmailAction,
+    initialArchiveExportActionState,
+  );
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
@@ -47,6 +55,23 @@ export function ArchivedRequestsBoard({
     });
   }, [items, search, statusFilter]);
 
+  const exportHref = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (search.trim()) {
+      params.set("search", search.trim());
+    }
+
+    if (statusFilter !== "all") {
+      params.set("status", statusFilter);
+    }
+
+    const queryString = params.toString();
+    return queryString
+      ? `/admin/archive/export?${queryString}`
+      : "/admin/archive/export";
+  }, [search, statusFilter]);
+
   return (
     <div className="space-y-6">
       <div className="rounded-[2rem] border border-navy/10 bg-white p-5 shadow-sm">
@@ -68,7 +93,26 @@ export function ArchivedRequestsBoard({
             />
           </div>
 
-          <div className="flex items-end gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <a
+              href={exportHref}
+              className="rounded-full border border-navy/15 bg-navy px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-navy/90"
+            >
+              Download CSV
+            </a>
+
+            <form action={exportFormAction}>
+              <input type="hidden" name="search" value={search} />
+              <input type="hidden" name="status" value={statusFilter} />
+              <button
+                type="submit"
+                disabled={isExportSending}
+                className="rounded-full border border-gold/30 bg-gold/10 px-4 py-3 text-sm font-semibold text-gold transition-colors hover:border-gold hover:bg-gold/15 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isExportSending ? "Sending..." : "Send CSV to company email"}
+              </button>
+            </form>
+
             <button
               type="button"
               onClick={() => setShowFilters((value) => !value)}
@@ -78,6 +122,18 @@ export function ArchivedRequestsBoard({
             </button>
           </div>
         </div>
+
+        {exportState.message ? (
+          <div
+            className={`mt-4 rounded-2xl px-4 py-3 text-sm ${
+              exportState.success
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border border-rose-200 bg-rose-50 text-rose-700"
+            }`}
+          >
+            {exportState.message}
+          </div>
+        ) : null}
 
         {showFilters ? (
           <div className="mt-4 grid grid-cols-1 gap-4 border-t border-navy/8 pt-4 md:grid-cols-1">
@@ -177,7 +233,9 @@ export function ArchivedRequestsBoard({
                         Delete archived request?
                       </p>
                       <p className="mt-2 text-sm leading-relaxed text-navy/60">
-                        This will permanently remove <span className="font-semibold text-navy">{item.id}</span> from the archive.
+                        This will permanently remove{" "}
+                        <span className="font-semibold text-navy">{item.id}</span>{" "}
+                        from the archive.
                       </p>
                       <div className="mt-4 flex items-center justify-end gap-2">
                         <button
