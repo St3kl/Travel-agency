@@ -2,10 +2,8 @@
 
 import { useActionState, useMemo, useState } from "react";
 
-import {
-  initialArchiveExportActionState,
-  sendArchiveExportEmailAction,
-} from "@/app/admin/archive/actions";
+import { sendArchiveExportEmailAction } from "@/app/admin/archive/actions";
+import { initialArchiveExportActionState } from "@/app/admin/archive/form-state";
 import {
   deleteArchivedReservationAction,
   setReservationArchivedAction,

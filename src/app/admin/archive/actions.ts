@@ -1,19 +1,10 @@
 "use server";
 
 import { type ArchiveExportFilters, buildArchiveExportFilename, buildArchivedReservationsCsv, filterArchivedReservations } from "@/lib/archive-export";
+import type { ArchiveExportActionState } from "@/app/admin/archive/form-state";
 import { requireAdminUser } from "@/lib/admin-session";
 import { sendArchivedReservationsExportEmail } from "@/lib/mailer";
 import { readReservations } from "@/lib/reservations";
-
-export type ArchiveExportActionState = {
-  success: boolean;
-  message: string;
-};
-
-export const initialArchiveExportActionState: ArchiveExportActionState = {
-  success: false,
-  message: "",
-};
 
 function normalizeStatus(value: FormDataEntryValue | null): ArchiveExportFilters["status"] {
   if (
