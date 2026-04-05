@@ -30,52 +30,60 @@ export async function submitReservation(
   _prevState: ReservationFormState,
   formData: FormData,
 ): Promise<ReservationFormState> {
-  const validatedFields = reservationSchema.safeParse({
-    destination: formData.get("destination"),
-    experience: formData.get("experience"),
-    travelDate: formData.get("travelDate"),
-    flexibleDates: formData.get("flexibleDates"),
-    duration: formData.get("duration"),
-    guestCount: formData.get("guestCount"),
-    fullName: formData.get("fullName"),
-    email: formData.get("email"),
-    whatsapp: formData.get("whatsapp"),
-    country: formData.get("country"),
-    budget: formData.get("budget"),
-    accommodation: formData.get("accommodation"),
-    specialOccasion: formData.get("specialOccasion"),
-    notes: formData.get("notes"),
-    preferredContact: formData.get("preferredContact"),
-  });
+  try {
+    const validatedFields = reservationSchema.safeParse({
+      destination: formData.get("destination"),
+      experience: formData.get("experience"),
+      travelDate: formData.get("travelDate"),
+      flexibleDates: formData.get("flexibleDates"),
+      duration: formData.get("duration"),
+      guestCount: formData.get("guestCount"),
+      fullName: formData.get("fullName"),
+      email: formData.get("email"),
+      whatsapp: formData.get("whatsapp"),
+      country: formData.get("country"),
+      budget: formData.get("budget"),
+      accommodation: formData.get("accommodation"),
+      specialOccasion: formData.get("specialOccasion"),
+      notes: formData.get("notes"),
+      preferredContact: formData.get("preferredContact"),
+    });
 
-  if (!validatedFields.success) {
+    if (!validatedFields.success) {
+      return {
+        success: false,
+        message: "Please review the highlighted fields before submitting.",
+        fieldErrors: validatedFields.error.flatten().fieldErrors as Partial<
+          Record<string, string[]>
+        >,
+      };
+    }
+
+    const reservation = await createReservation({
+      ...validatedFields.data,
+      specialOccasion: validatedFields.data.specialOccasion ?? "",
+      notes: validatedFields.data.notes ?? "",
+    });
+    const emailResult = await sendReservationEmail(reservation);
+    const whatsappResult = await sendReservationWhatsappNotification(reservation);
+
+    revalidatePath("/admin/reservations");
+
+    return {
+      success: true,
+      message: "Thank you for applying. Please check your email.",
+      reservationId: reservation.id,
+      emailMode: emailResult.mode,
+      previewPath:
+        emailResult.mode === "preview" ? emailResult.previewDirectory : undefined,
+      whatsappMode: whatsappResult.mode,
+    };
+  } catch {
     return {
       success: false,
-      message: "Please review the highlighted fields before submitting.",
-      fieldErrors: validatedFields.error.flatten().fieldErrors as Partial<
-        Record<string, string[]>
-      >,
+      message:
+        "We could not complete the reservation request right now. Please try again in a moment.",
     };
   }
-
-  const reservation = await createReservation({
-    ...validatedFields.data,
-    specialOccasion: validatedFields.data.specialOccasion ?? "",
-    notes: validatedFields.data.notes ?? "",
-  });
-  const emailResult = await sendReservationEmail(reservation);
-  const whatsappResult = await sendReservationWhatsappNotification(reservation);
-
-  revalidatePath("/admin/reservations");
-
-  return {
-    success: true,
-    message: "Thank you for applying. Please check your email.",
-    reservationId: reservation.id,
-    emailMode: emailResult.mode,
-    previewPath:
-      emailResult.mode === "preview" ? emailResult.previewDirectory : undefined,
-    whatsappMode: whatsappResult.mode,
-  };
 }
 

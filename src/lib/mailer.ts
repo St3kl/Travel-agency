@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 
 import nodemailer from "nodemailer";
@@ -95,6 +96,14 @@ function createTransporter() {
   };
 }
 
+function getPreviewRootDirectory() {
+  return path.join(os.tmpdir(), "ekeon-previews");
+}
+
+function getPreviewDirectory(...segments: string[]) {
+  return path.join(getPreviewRootDirectory(), ...segments);
+}
+
 function buildBusinessReservationEmail(reservation: ReservationRecord) {
   const lines = [
     "New reservation request received",
@@ -153,12 +162,7 @@ async function savePreview(
   customerText: string,
   pdfBytes: Uint8Array,
 ) {
-  const previewDirectory = path.join(
-    process.cwd(),
-    "data",
-    "mail-previews",
-    reservation.id,
-  );
+  const previewDirectory = getPreviewDirectory("mail-previews", reservation.id);
   await fs.mkdir(previewDirectory, { recursive: true });
 
   await fs.writeFile(
@@ -207,22 +211,36 @@ export async function sendReservationEmail(
     };
   }
 
-  await transporter.sendMail({
-    from,
-    to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
-    replyTo: reservation.email,
-    subject: `New reservation request ${reservation.id}`,
-    text: businessText,
-    attachments: [attachment],
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
+      replyTo: reservation.email,
+      subject: `New reservation request ${reservation.id}`,
+      text: businessText,
+      attachments: [attachment],
+    });
 
-  await transporter.sendMail({
-    from,
-    to: reservation.email,
-    subject: `Reservation received: ${reservation.id}`,
-    text: customerText,
-    attachments: [attachment],
-  });
+    await transporter.sendMail({
+      from,
+      to: reservation.email,
+      subject: `Reservation received: ${reservation.id}`,
+      text: customerText,
+      attachments: [attachment],
+    });
+  } catch {
+    const previewDirectory = await savePreview(
+      reservation,
+      businessText,
+      customerText,
+      pdfBytes,
+    );
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
 
   return {
     delivered: true,
@@ -277,12 +295,7 @@ export async function sendReservationDecisionEmail({
   });
 
   if (!host || !user || !pass || !transporter) {
-    const previewDirectory = path.join(
-      process.cwd(),
-      "data",
-      "mail-previews",
-      reservation.id,
-    );
+    const previewDirectory = getPreviewDirectory("mail-previews", reservation.id);
     await fs.mkdir(previewDirectory, { recursive: true });
     await fs.writeFile(
       path.join(
@@ -300,12 +313,31 @@ export async function sendReservationDecisionEmail({
     };
   }
 
-  await transporter.sendMail({
-    from,
-    to: reservation.email,
-    subject: `Reservation ${reservation.status}: ${reservation.id}`,
-    text: customerText,
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: reservation.email,
+      subject: `Reservation ${reservation.status}: ${reservation.id}`,
+      text: customerText,
+    });
+  } catch {
+    const previewDirectory = getPreviewDirectory("mail-previews", reservation.id);
+    await fs.mkdir(previewDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(
+        previewDirectory,
+        `decision-${reservation.status}-customer-email.txt`,
+      ),
+      customerText,
+      "utf8",
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
 
   return {
     delivered: true,
@@ -363,12 +395,7 @@ export async function sendReservationInvoiceEmail({
   };
 
   if (!host || !user || !pass || !transporter) {
-    const previewDirectory = path.join(
-      process.cwd(),
-      "data",
-      "mail-previews",
-      reservation.id,
-    );
+    const previewDirectory = getPreviewDirectory("mail-previews", reservation.id);
     await fs.mkdir(previewDirectory, { recursive: true });
     await fs.writeFile(
       path.join(previewDirectory, "invoice-customer-email.txt"),
@@ -387,13 +414,33 @@ export async function sendReservationInvoiceEmail({
     };
   }
 
-  await transporter.sendMail({
-    from,
-    to: reservation.email,
-    subject: `Proforma invoice: ${reservation.id}`,
-    text: customerText,
-    attachments: [attachment],
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: reservation.email,
+      subject: `Proforma invoice: ${reservation.id}`,
+      text: customerText,
+      attachments: [attachment],
+    });
+  } catch {
+    const previewDirectory = getPreviewDirectory("mail-previews", reservation.id);
+    await fs.mkdir(previewDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(previewDirectory, "invoice-customer-email.txt"),
+      customerText,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(previewDirectory, `${reservation.id}-proforma-invoice.pdf`),
+      Buffer.from(pdfBytes),
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
 
   return {
     delivered: true,
@@ -442,12 +489,7 @@ export async function sendReservationPaidEmail({
   };
 
   if (!host || !user || !pass || !transporter) {
-    const previewDirectory = path.join(
-      process.cwd(),
-      "data",
-      "mail-previews",
-      reservation.id,
-    );
+    const previewDirectory = getPreviewDirectory("mail-previews", reservation.id);
     await fs.mkdir(previewDirectory, { recursive: true });
     await fs.writeFile(
       path.join(previewDirectory, "payment-confirmation-customer-email.txt"),
@@ -466,13 +508,33 @@ export async function sendReservationPaidEmail({
     };
   }
 
-  await transporter.sendMail({
-    from,
-    to: reservation.email,
-    subject: `Payment received: ${reservation.id}`,
-    text: customerText,
-    attachments: [attachment],
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: reservation.email,
+      subject: `Payment received: ${reservation.id}`,
+      text: customerText,
+      attachments: [attachment],
+    });
+  } catch {
+    const previewDirectory = getPreviewDirectory("mail-previews", reservation.id);
+    await fs.mkdir(previewDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(previewDirectory, "payment-confirmation-customer-email.txt"),
+      customerText,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(previewDirectory, `${reservation.id}-paid-invoice.pdf`),
+      Buffer.from(pdfBytes),
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
 
   return {
     delivered: true,
@@ -522,9 +584,7 @@ export async function sendInquiryEmail(
   const customerText = buildCustomerInquiryEmail(inquiry);
 
   if (!host || !user || !pass || !transporter) {
-    const previewDirectory = path.join(
-      process.cwd(),
-      "data",
+    const previewDirectory = getPreviewDirectory(
       "inquiry-mail-previews",
       inquiry.id,
     );
@@ -547,20 +607,44 @@ export async function sendInquiryEmail(
     };
   }
 
-  await transporter.sendMail({
-    from,
-    to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
-    replyTo: inquiry.email,
-    subject: `New inquiry ${inquiry.id}`,
-    text: businessText,
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
+      replyTo: inquiry.email,
+      subject: `New inquiry ${inquiry.id}`,
+      text: businessText,
+    });
 
-  await transporter.sendMail({
-    from,
-    to: inquiry.email,
-    subject: `Inquiry received: ${inquiry.id}`,
-    text: customerText,
-  });
+    await transporter.sendMail({
+      from,
+      to: inquiry.email,
+      subject: `Inquiry received: ${inquiry.id}`,
+      text: customerText,
+    });
+  } catch {
+    const previewDirectory = getPreviewDirectory(
+      "inquiry-mail-previews",
+      inquiry.id,
+    );
+    await fs.mkdir(previewDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(previewDirectory, "internal-email.txt"),
+      businessText,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(previewDirectory, "customer-email.txt"),
+      customerText,
+      "utf8",
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
 
   return {
     delivered: true,
@@ -611,9 +695,7 @@ export async function sendPartnerInquiryEmail(
   const customerText = buildCustomerPartnerInquiryEmail(inquiry);
 
   if (!host || !user || !pass || !transporter) {
-    const previewDirectory = path.join(
-      process.cwd(),
-      "data",
+    const previewDirectory = getPreviewDirectory(
       "partner-mail-previews",
       inquiry.id,
     );
@@ -636,20 +718,44 @@ export async function sendPartnerInquiryEmail(
     };
   }
 
-  await transporter.sendMail({
-    from,
-    to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
-    replyTo: inquiry.email,
-    subject: `New partnership inquiry ${inquiry.id}`,
-    text: businessText,
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
+      replyTo: inquiry.email,
+      subject: `New partnership inquiry ${inquiry.id}`,
+      text: businessText,
+    });
 
-  await transporter.sendMail({
-    from,
-    to: inquiry.email,
-    subject: `Partnership inquiry received: ${inquiry.id}`,
-    text: customerText,
-  });
+    await transporter.sendMail({
+      from,
+      to: inquiry.email,
+      subject: `Partnership inquiry received: ${inquiry.id}`,
+      text: customerText,
+    });
+  } catch {
+    const previewDirectory = getPreviewDirectory(
+      "partner-mail-previews",
+      inquiry.id,
+    );
+    await fs.mkdir(previewDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(previewDirectory, "internal-email.txt"),
+      businessText,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(previewDirectory, "partner-email.txt"),
+      customerText,
+      "utf8",
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
 
   return {
     delivered: true,
@@ -684,9 +790,7 @@ export async function sendArchivedReservationsExportEmail(
   };
 
   if (!host || !user || !pass || !transporter) {
-    const previewDirectory = path.join(
-      process.cwd(),
-      "data",
+    const previewDirectory = getPreviewDirectory(
       "mail-previews",
       "archive-exports",
       input.filename.replace(/\.csv$/i, ""),
@@ -710,14 +814,39 @@ export async function sendArchivedReservationsExportEmail(
     };
   }
 
-  await transporter.sendMail({
-    from,
-    to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
-    replyTo: input.requestedByEmail,
-    subject: `Archived reservations export - ${input.totalRecords} record(s)`,
-    text: businessText,
-    attachments: [attachment],
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
+      replyTo: input.requestedByEmail,
+      subject: `Archived reservations export - ${input.totalRecords} record(s)`,
+      text: businessText,
+      attachments: [attachment],
+    });
+  } catch {
+    const previewDirectory = getPreviewDirectory(
+      "mail-previews",
+      "archive-exports",
+      input.filename.replace(/\.csv$/i, ""),
+    );
+    await fs.mkdir(previewDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(previewDirectory, "internal-email.txt"),
+      businessText,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(previewDirectory, input.filename),
+      `\uFEFF${input.csvContent}`,
+      "utf8",
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
 
   return {
     delivered: true,
