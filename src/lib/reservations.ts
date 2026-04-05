@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
-import { promises as fs } from "fs";
-import path from "path";
+
+import { getSupabaseServerClient } from "@/lib/supabase";
 
 export type ReservationStatus =
   | "pending"
@@ -57,48 +57,145 @@ export type ReservationRecord = ReservationInput & {
   paymentEmailMode?: "smtp" | "preview";
 };
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const RESERVATIONS_PATH = path.join(DATA_DIR, "reservations.json");
+type ReservationRow = {
+  id: string;
+  destination: string;
+  experience: string;
+  travel_date: string;
+  flexible_dates: string;
+  duration: string;
+  guest_count: number;
+  full_name: string;
+  email: string;
+  whatsapp: string;
+  country: string;
+  budget: string;
+  accommodation: string;
+  special_occasion: string;
+  notes: string;
+  preferred_contact: string;
+  status: ReservationStatus | "approved" | string | null;
+  submitted_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  archived_by_name: string | null;
+  archived_by_email: string | null;
+  status_note: string | null;
+  processed_by_name: string | null;
+  processed_by_email: string | null;
+  status_email_sent_at: string | null;
+  status_email_mode: "smtp" | "preview" | null;
+  invoice_currency: string | null;
+  invoice_total: number | null;
+  invoice_issued_at: string | null;
+  invoice_due_date: string | null;
+  invoice_items: ReservationInvoiceItem[] | null;
+  invoice_note: string | null;
+  payment_confirmed_at: string | null;
+  payment_confirmed_by_name: string | null;
+  payment_confirmed_by_email: string | null;
+  payment_email_sent_at: string | null;
+  payment_email_mode: "smtp" | "preview" | null;
+};
 
-async function ensureReservationsFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-
-  try {
-    await fs.access(RESERVATIONS_PATH);
-  } catch {
-    await fs.writeFile(RESERVATIONS_PATH, "[]\n", "utf8");
+function normalizeReservationStatus(
+  status: ReservationRow["status"],
+): ReservationStatus {
+  if (status === "approved") {
+    return "invoiced";
   }
+
+  if (status === "pending" || status === "invoiced" || status === "paid" || status === "rejected") {
+    return status;
+  }
+
+  return "pending";
 }
 
-export async function readReservations(): Promise<ReservationRecord[]> {
-  await ensureReservationsFile();
+function normalizeInvoiceItems(
+  value: ReservationRow["invoice_items"],
+): ReservationInvoiceItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
 
-  const raw = await fs.readFile(RESERVATIONS_PATH, "utf8");
-  const parsed = JSON.parse(raw) as Array<
-    Omit<ReservationRecord, "status"> & {
-      status?: ReservationStatus | "approved" | string;
-    }
-  >;
-
-  const normalized = parsed.map((reservation) => ({
-    ...reservation,
-    status:
-      reservation.status === "approved"
-        ? "invoiced"
-        : (reservation.status ?? "pending"),
-    invoiceItems: reservation.invoiceItems ?? [],
-  })) as ReservationRecord[];
-
-  return normalized.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+  return value
+    .map((item) => ({
+      description:
+        item && typeof item.description === "string" ? item.description : "",
+      amount:
+        item && typeof item.amount === "number"
+          ? item.amount
+          : Number(item?.amount ?? 0),
+    }))
+    .filter((item) => item.description && !Number.isNaN(item.amount));
 }
 
-async function writeReservations(reservations: ReservationRecord[]) {
-  await ensureReservationsFile();
-  await fs.writeFile(
-    RESERVATIONS_PATH,
-    `${JSON.stringify(reservations, null, 2)}\n`,
-    "utf8",
-  );
+function mapReservation(row: ReservationRow): ReservationRecord {
+  return {
+    id: row.id,
+    destination: row.destination,
+    experience: row.experience,
+    travelDate: row.travel_date,
+    flexibleDates: row.flexible_dates,
+    duration: row.duration,
+    guestCount: row.guest_count,
+    fullName: row.full_name,
+    email: row.email,
+    whatsapp: row.whatsapp,
+    country: row.country,
+    budget: row.budget,
+    accommodation: row.accommodation,
+    specialOccasion: row.special_occasion,
+    notes: row.notes,
+    preferredContact: row.preferred_contact,
+    status: normalizeReservationStatus(row.status),
+    submittedAt: row.submitted_at,
+    updatedAt: row.updated_at,
+    archivedAt: row.archived_at ?? undefined,
+    archivedByName: row.archived_by_name ?? undefined,
+    archivedByEmail: row.archived_by_email ?? undefined,
+    statusNote: row.status_note ?? undefined,
+    processedByName: row.processed_by_name ?? undefined,
+    processedByEmail: row.processed_by_email ?? undefined,
+    statusEmailSentAt: row.status_email_sent_at ?? undefined,
+    statusEmailMode: row.status_email_mode ?? undefined,
+    invoiceCurrency: row.invoice_currency ?? undefined,
+    invoiceTotal: row.invoice_total ?? undefined,
+    invoiceIssuedAt: row.invoice_issued_at ?? undefined,
+    invoiceDueDate: row.invoice_due_date ?? undefined,
+    invoiceItems: normalizeInvoiceItems(row.invoice_items),
+    invoiceNote: row.invoice_note ?? undefined,
+    paymentConfirmedAt: row.payment_confirmed_at ?? undefined,
+    paymentConfirmedByName: row.payment_confirmed_by_name ?? undefined,
+    paymentConfirmedByEmail: row.payment_confirmed_by_email ?? undefined,
+    paymentEmailSentAt: row.payment_email_sent_at ?? undefined,
+    paymentEmailMode: row.payment_email_mode ?? undefined,
+  };
+}
+
+function mapReservationInsert(input: ReservationInput & { id: string; now: string }) {
+  return {
+    id: input.id,
+    destination: input.destination,
+    experience: input.experience,
+    travel_date: input.travelDate,
+    flexible_dates: input.flexibleDates,
+    duration: input.duration,
+    guest_count: input.guestCount,
+    full_name: input.fullName,
+    email: input.email,
+    whatsapp: input.whatsapp,
+    country: input.country,
+    budget: input.budget,
+    accommodation: input.accommodation,
+    special_occasion: input.specialOccasion,
+    notes: input.notes,
+    preferred_contact: input.preferredContact,
+    status: "pending" as ReservationStatus,
+    submitted_at: input.now,
+    updated_at: input.now,
+  };
 }
 
 function buildReservationId() {
@@ -107,23 +204,36 @@ function buildReservationId() {
   return `EKR-${date}-${shortId}`;
 }
 
+export async function readReservations(): Promise<ReservationRecord[]> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("reservations")
+    .select("*")
+    .order("submitted_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Unable to read reservations from Supabase: ${error.message}`);
+  }
+
+  return ((data ?? []) as ReservationRow[]).map(mapReservation);
+}
+
 export async function createReservation(
   input: ReservationInput,
 ): Promise<ReservationRecord> {
   const now = new Date().toISOString();
-  const reservation: ReservationRecord = {
-    ...input,
-    id: buildReservationId(),
-    status: "pending",
-    submittedAt: now,
-    updatedAt: now,
-  };
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("reservations")
+    .insert(mapReservationInsert({ ...input, id: buildReservationId(), now }))
+    .select("*")
+    .single();
 
-  const reservations = await readReservations();
-  reservations.unshift(reservation);
-  await writeReservations(reservations);
+  if (error) {
+    throw new Error(`Unable to create reservation in Supabase: ${error.message}`);
+  }
 
-  return reservation;
+  return mapReservation(data as ReservationRow);
 }
 
 export async function updateReservationStatus(
@@ -137,26 +247,27 @@ export async function updateReservationStatus(
     statusEmailMode?: "smtp" | "preview";
   },
 ) {
-  const reservations = await readReservations();
-  const nextReservations = reservations.map((reservation) =>
-    reservation.id === id
-      ? {
-          ...reservation,
-          status,
-          updatedAt: new Date().toISOString(),
-          statusNote: meta?.statusNote?.trim() || "",
-          processedByName: meta?.processedByName ?? reservation.processedByName,
-          processedByEmail: meta?.processedByEmail ?? reservation.processedByEmail,
-          statusEmailSentAt:
-            meta?.statusEmailSentAt ?? reservation.statusEmailSentAt,
-          statusEmailMode: meta?.statusEmailMode ?? reservation.statusEmailMode,
-        }
-      : reservation,
-  );
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("reservations")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+      status_note: meta?.statusNote?.trim() || "",
+      processed_by_name: meta?.processedByName,
+      processed_by_email: meta?.processedByEmail,
+      status_email_sent_at: meta?.statusEmailSentAt,
+      status_email_mode: meta?.statusEmailMode,
+    })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
 
-  await writeReservations(nextReservations);
+  if (error) {
+    throw new Error(`Unable to update reservation status: ${error.message}`);
+  }
 
-  return nextReservations.find((reservation) => reservation.id === id) ?? null;
+  return data ? mapReservation(data as ReservationRow) : null;
 }
 
 export async function saveReservationInvoice(
@@ -172,31 +283,32 @@ export async function saveReservationInvoice(
     statusEmailMode?: "smtp" | "preview";
   },
 ) {
-  const reservations = await readReservations();
-  const nextReservations = reservations.map((reservation) =>
-    reservation.id === id
-      ? {
-          ...reservation,
-          status: "invoiced" as ReservationStatus,
-          updatedAt: new Date().toISOString(),
-          invoiceCurrency: invoice.currency,
-          invoiceTotal: invoice.total,
-          invoiceDueDate: invoice.dueDate,
-          invoiceItems: invoice.items,
-          invoiceNote: invoice.note?.trim() || "",
-          invoiceIssuedAt: new Date().toISOString(),
-          processedByName: invoice.processedByName ?? reservation.processedByName,
-          processedByEmail:
-            invoice.processedByEmail ?? reservation.processedByEmail,
-          statusEmailSentAt: new Date().toISOString(),
-          statusEmailMode: invoice.statusEmailMode,
-        }
-      : reservation,
-  );
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("reservations")
+    .update({
+      status: "invoiced" as ReservationStatus,
+      updated_at: new Date().toISOString(),
+      invoice_currency: invoice.currency,
+      invoice_total: invoice.total,
+      invoice_due_date: invoice.dueDate,
+      invoice_items: invoice.items,
+      invoice_note: invoice.note?.trim() || "",
+      invoice_issued_at: new Date().toISOString(),
+      processed_by_name: invoice.processedByName,
+      processed_by_email: invoice.processedByEmail,
+      status_email_sent_at: new Date().toISOString(),
+      status_email_mode: invoice.statusEmailMode,
+    })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
 
-  await writeReservations(nextReservations);
+  if (error) {
+    throw new Error(`Unable to save reservation invoice: ${error.message}`);
+  }
 
-  return nextReservations.find((reservation) => reservation.id === id) ?? null;
+  return data ? mapReservation(data as ReservationRow) : null;
 }
 
 export async function confirmReservationPayment(
@@ -207,28 +319,27 @@ export async function confirmReservationPayment(
     paymentEmailMode?: "smtp" | "preview";
   },
 ) {
-  const reservations = await readReservations();
-  const nextReservations = reservations.map((reservation) =>
-    reservation.id === id
-      ? {
-          ...reservation,
-          status: "paid" as ReservationStatus,
-          updatedAt: new Date().toISOString(),
-          paymentConfirmedAt:
-            reservation.paymentConfirmedAt ?? new Date().toISOString(),
-          paymentConfirmedByName:
-            meta.paymentConfirmedByName ?? reservation.paymentConfirmedByName,
-          paymentConfirmedByEmail:
-            meta.paymentConfirmedByEmail ?? reservation.paymentConfirmedByEmail,
-          paymentEmailSentAt: new Date().toISOString(),
-          paymentEmailMode: meta.paymentEmailMode,
-        }
-      : reservation,
-  );
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("reservations")
+    .update({
+      status: "paid" as ReservationStatus,
+      updated_at: new Date().toISOString(),
+      payment_confirmed_at: new Date().toISOString(),
+      payment_confirmed_by_name: meta.paymentConfirmedByName,
+      payment_confirmed_by_email: meta.paymentConfirmedByEmail,
+      payment_email_sent_at: new Date().toISOString(),
+      payment_email_mode: meta.paymentEmailMode,
+    })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
 
-  await writeReservations(nextReservations);
+  if (error) {
+    throw new Error(`Unable to confirm reservation payment: ${error.message}`);
+  }
 
-  return nextReservations.find((reservation) => reservation.id === id) ?? null;
+  return data ? mapReservation(data as ReservationRow) : null;
 }
 
 export async function setReservationArchived(
@@ -239,42 +350,54 @@ export async function setReservationArchived(
     archivedByEmail?: string;
   },
 ) {
-  const reservations = await readReservations();
-  const nextReservations = reservations.map((reservation) =>
-    reservation.id === id
-      ? {
-          ...reservation,
-          updatedAt: new Date().toISOString(),
-          archivedAt: archived ? new Date().toISOString() : undefined,
-          archivedByName: archived
-            ? meta?.archivedByName ?? reservation.archivedByName
-            : undefined,
-          archivedByEmail: archived
-            ? meta?.archivedByEmail ?? reservation.archivedByEmail
-            : undefined,
-        }
-      : reservation,
-  );
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("reservations")
+    .update({
+      updated_at: new Date().toISOString(),
+      archived_at: archived ? new Date().toISOString() : null,
+      archived_by_name: archived ? meta?.archivedByName : null,
+      archived_by_email: archived ? meta?.archivedByEmail : null,
+    })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
 
-  await writeReservations(nextReservations);
+  if (error) {
+    throw new Error(`Unable to archive reservation: ${error.message}`);
+  }
 
-  return nextReservations.find((reservation) => reservation.id === id) ?? null;
+  return data ? mapReservation(data as ReservationRow) : null;
 }
 
 export async function deleteArchivedReservation(id: string) {
-  const reservations = await readReservations();
-  const reservationToDelete = reservations.find((reservation) => reservation.id === id);
+  const supabase = getSupabaseServerClient();
+  const { data: reservation, error: readError } = await supabase
+    .from("reservations")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (!reservationToDelete) {
+  if (readError) {
+    throw new Error(`Unable to load reservation for deletion: ${readError.message}`);
+  }
+
+  if (!reservation) {
     return null;
   }
 
-  if (!reservationToDelete.archivedAt) {
+  if (!reservation.archived_at) {
     throw new Error("Only archived reservations can be deleted permanently.");
   }
 
-  const nextReservations = reservations.filter((reservation) => reservation.id !== id);
-  await writeReservations(nextReservations);
+  const { error: deleteError } = await supabase
+    .from("reservations")
+    .delete()
+    .eq("id", id);
 
-  return reservationToDelete;
+  if (deleteError) {
+    throw new Error(`Unable to delete archived reservation: ${deleteError.message}`);
+  }
+
+  return mapReservation(reservation as ReservationRow);
 }

@@ -56,6 +56,16 @@ type ContactInquiryEmailInput = {
   updatedAt: string;
 };
 
+type ArchivedReservationsExportEmailInput = {
+  csvContent: string;
+  filename: string;
+  totalRecords: number;
+  requestedByName: string;
+  requestedByEmail: string;
+  search?: string;
+  status?: string;
+};
+
 function createTransporter() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT ?? "587");
@@ -639,6 +649,74 @@ export async function sendPartnerInquiryEmail(
     to: inquiry.email,
     subject: `Partnership inquiry received: ${inquiry.id}`,
     text: customerText,
+  });
+
+  return {
+    delivered: true,
+    mode: "smtp",
+  };
+}
+
+function buildArchivedReservationsExportEmail(
+  input: ArchivedReservationsExportEmailInput,
+) {
+  return [
+    "Archived reservations export ready",
+    "",
+    `Requested by: ${input.requestedByName} (${input.requestedByEmail})`,
+    `Records exported: ${input.totalRecords}`,
+    `Status filter: ${input.status || "all"}`,
+    `Search filter: ${input.search?.trim() || "none"}`,
+    "",
+    "The CSV export is attached to this email.",
+  ].join("\n");
+}
+
+export async function sendArchivedReservationsExportEmail(
+  input: ArchivedReservationsExportEmailInput,
+): Promise<EmailResult> {
+  const { host, user, pass, from, transporter } = createTransporter();
+  const businessText = buildArchivedReservationsExportEmail(input);
+  const attachment = {
+    filename: input.filename,
+    content: Buffer.from(`\uFEFF${input.csvContent}`, "utf8"),
+    contentType: "text/csv; charset=utf-8",
+  };
+
+  if (!host || !user || !pass || !transporter) {
+    const previewDirectory = path.join(
+      process.cwd(),
+      "data",
+      "mail-previews",
+      "archive-exports",
+      input.filename.replace(/\.csv$/i, ""),
+    );
+    await fs.mkdir(previewDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(previewDirectory, "internal-email.txt"),
+      businessText,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(previewDirectory, input.filename),
+      `\uFEFF${input.csvContent}`,
+      "utf8",
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewDirectory,
+    };
+  }
+
+  await transporter.sendMail({
+    from,
+    to: process.env.BOOKING_NOTIFICATION_EMAIL ?? CONTACT_EMAIL,
+    replyTo: input.requestedByEmail,
+    subject: `Archived reservations export - ${input.totalRecords} record(s)`,
+    text: businessText,
+    attachments: [attachment],
   });
 
   return {

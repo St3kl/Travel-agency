@@ -1,94 +1,84 @@
-import { promises as fs } from "fs";
-import path from "path";
-
 import { formatVisitMonthLabel, getCurrentVisitMonthKey } from "@/lib/visit-period";
+import { getSupabaseServerClient } from "@/lib/supabase";
 
-type MonthlyVisitsData = {
-  monthKey: string;
+type MonthlyVisitsRow = {
+  month_key: string;
   count: number;
 };
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const MONTHLY_VISITS_PATH = path.join(DATA_DIR, "monthly-visits.json");
+async function ensureMonthlyVisitsRow(monthKey: string) {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("monthly_visits")
+    .upsert(
+      {
+        month_key: monthKey,
+        count: 0,
+      },
+      {
+        onConflict: "month_key",
+        ignoreDuplicates: true,
+      },
+    )
+    .select("month_key, count")
+    .single();
 
-async function ensureMonthlyVisitsFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-
-  try {
-    await fs.access(MONTHLY_VISITS_PATH);
-  } catch {
-    const initialData: MonthlyVisitsData = {
-      monthKey: getCurrentVisitMonthKey(),
-      count: 0,
-    };
-    await fs.writeFile(
-      MONTHLY_VISITS_PATH,
-      `${JSON.stringify(initialData, null, 2)}\n`,
-      "utf8",
-    );
-  }
-}
-
-async function readMonthlyVisitsData() {
-  await ensureMonthlyVisitsFile();
-  const raw = await fs.readFile(MONTHLY_VISITS_PATH, "utf8");
-  const parsed = JSON.parse(raw) as Partial<MonthlyVisitsData>;
-  const currentMonthKey = getCurrentVisitMonthKey();
-
-  if (
-    parsed.monthKey !== currentMonthKey ||
-    typeof parsed.count !== "number" ||
-    Number.isNaN(parsed.count)
-  ) {
-    const resetData: MonthlyVisitsData = {
-      monthKey: currentMonthKey,
-      count: 0,
-    };
-    await fs.writeFile(
-      MONTHLY_VISITS_PATH,
-      `${JSON.stringify(resetData, null, 2)}\n`,
-      "utf8",
-    );
-    return resetData;
+  if (error && error.code !== "PGRST116") {
+    throw new Error(`Unable to ensure monthly visits row: ${error.message}`);
   }
 
-  return {
-    monthKey: parsed.monthKey,
-    count: parsed.count,
-  } as MonthlyVisitsData;
-}
-
-async function writeMonthlyVisitsData(data: MonthlyVisitsData) {
-  await ensureMonthlyVisitsFile();
-  await fs.writeFile(
-    MONTHLY_VISITS_PATH,
-    `${JSON.stringify(data, null, 2)}\n`,
-    "utf8",
-  );
+  return (data as MonthlyVisitsRow | null) ?? null;
 }
 
 export async function getMonthlyVisits() {
-  const data = await readMonthlyVisitsData();
+  const monthKey = getCurrentVisitMonthKey();
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("monthly_visits")
+    .select("month_key, count")
+    .eq("month_key", monthKey)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Unable to read monthly visits from Supabase: ${error.message}`);
+  }
+
+  const row =
+    (data as MonthlyVisitsRow | null) ??
+    (await ensureMonthlyVisitsRow(monthKey)) ?? {
+      month_key: monthKey,
+      count: 0,
+    };
 
   return {
-    count: data.count,
-    monthKey: data.monthKey,
-    monthLabel: formatVisitMonthLabel(data.monthKey),
+    count: row.count,
+    monthKey: row.month_key,
+    monthLabel: formatVisitMonthLabel(row.month_key),
   };
 }
 
 export async function incrementMonthlyVisits() {
-  const data = await readMonthlyVisitsData();
-  const nextData: MonthlyVisitsData = {
-    monthKey: data.monthKey,
-    count: data.count + 1,
-  };
+  const monthKey = getCurrentVisitMonthKey();
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.rpc("increment_monthly_visits", {
+    target_month_key: monthKey,
+  });
 
-  await writeMonthlyVisitsData(nextData);
+  if (error) {
+    throw new Error(`Unable to increment monthly visits in Supabase: ${error.message}`);
+  }
+
+  const row = Array.isArray(data)
+    ? (data[0] as MonthlyVisitsRow | undefined)
+    : (data as MonthlyVisitsRow | null);
+
+  if (!row) {
+    throw new Error("Supabase did not return a monthly visits row.");
+  }
 
   return {
-    count: nextData.count,
-    monthKey: nextData.monthKey,
-    monthLabel: formatVisitMonthLabel(nextData.monthKey),
+    count: row.count,
+    monthKey: row.month_key,
+    monthLabel: formatVisitMonthLabel(row.month_key),
   };
 }

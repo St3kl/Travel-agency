@@ -4,9 +4,9 @@ import {
   scrypt as nodeScrypt,
   timingSafeEqual,
 } from "crypto";
-import { promises as fs } from "fs";
-import path from "path";
 import { promisify } from "util";
+
+import { getSupabaseServerClient } from "@/lib/supabase";
 
 const scrypt = promisify(nodeScrypt);
 
@@ -21,38 +21,42 @@ export type AdminUserRecord = {
 
 export type AdminSessionUser = Pick<AdminUserRecord, "id" | "name" | "email">;
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const ADMIN_USERS_PATH = path.join(DATA_DIR, "admin-users.json");
+type AdminUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  created_at: string;
+  updated_at: string;
+};
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-async function ensureAdminUsersFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-
-  try {
-    await fs.access(ADMIN_USERS_PATH);
-  } catch {
-    await fs.writeFile(ADMIN_USERS_PATH, "[]\n", "utf8");
-  }
-}
-
-async function writeAdminUsers(users: AdminUserRecord[]) {
-  await ensureAdminUsersFile();
-  await fs.writeFile(
-    ADMIN_USERS_PATH,
-    `${JSON.stringify(users, null, 2)}\n`,
-    "utf8",
-  );
+function mapAdminUser(row: AdminUserRow): AdminUserRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    passwordHash: row.password_hash,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 export async function readAdminUsers(): Promise<AdminUserRecord[]> {
-  await ensureAdminUsersFile();
-  const raw = await fs.readFile(ADMIN_USERS_PATH, "utf8");
-  const users = JSON.parse(raw) as AdminUserRecord[];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("id, name, email, password_hash, created_at, updated_at")
+    .order("name", { ascending: true });
 
-  return users.sort((a, b) => a.name.localeCompare(b.name));
+  if (error) {
+    throw new Error(`Unable to read admin users from Supabase: ${error.message}`);
+  }
+
+  return (data ?? []).map(mapAdminUser);
 }
 
 export async function hashAdminPassword(password: string) {
@@ -82,14 +86,34 @@ export async function verifyAdminPassword(
 }
 
 export async function findAdminUserByEmail(email: string) {
-  const users = await readAdminUsers();
+  const supabase = getSupabaseServerClient();
   const normalizedEmail = normalizeEmail(email);
-  return users.find((user) => normalizeEmail(user.email) === normalizedEmail) ?? null;
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("id, name, email, password_hash, created_at, updated_at")
+    .eq("email", normalizedEmail)
+    .maybeSingle<AdminUserRow>();
+
+  if (error) {
+    throw new Error(`Unable to find admin user by email: ${error.message}`);
+  }
+
+  return data ? mapAdminUser(data) : null;
 }
 
 export async function findAdminUserById(id: string) {
-  const users = await readAdminUsers();
-  return users.find((user) => user.id === id) ?? null;
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("id, name, email, password_hash, created_at, updated_at")
+    .eq("id", id)
+    .maybeSingle<AdminUserRow>();
+
+  if (error) {
+    throw new Error(`Unable to find admin user by id: ${error.message}`);
+  }
+
+  return data ? mapAdminUser(data) : null;
 }
 
 export async function authenticateAdminUser(
@@ -119,25 +143,33 @@ export async function createAdminUser(input: {
   email: string;
   password: string;
 }) {
-  const users = await readAdminUsers();
   const normalizedEmail = normalizeEmail(input.email);
+  const existingUser = await findAdminUserByEmail(normalizedEmail);
 
-  if (users.some((user) => normalizeEmail(user.email) === normalizedEmail)) {
+  if (existingUser) {
     throw new Error(`An admin with email ${normalizedEmail} already exists.`);
   }
 
   const now = new Date().toISOString();
-  const user: AdminUserRecord = {
+  const payload = {
     id: randomUUID(),
     name: input.name.trim(),
     email: normalizedEmail,
-    passwordHash: await hashAdminPassword(input.password),
-    createdAt: now,
-    updatedAt: now,
+    password_hash: await hashAdminPassword(input.password),
+    created_at: now,
+    updated_at: now,
   };
 
-  users.push(user);
-  await writeAdminUsers(users);
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .insert(payload)
+    .select("id, name, email, password_hash, created_at, updated_at")
+    .single<AdminUserRow>();
 
-  return user;
+  if (error) {
+    throw new Error(`Unable to create admin user in Supabase: ${error.message}`);
+  }
+
+  return mapAdminUser(data);
 }
