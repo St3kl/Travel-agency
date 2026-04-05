@@ -18,41 +18,49 @@ export async function submitInquiry(
   _prevState: InquiryFormState,
   formData: FormData,
 ): Promise<InquiryFormState> {
-  const validatedFields = inquirySchema.safeParse({
-    firstName: formData.get("firstName"),
-    lastName: formData.get("lastName"),
-    email: formData.get("email"),
-    interestedIn: formData.get("interestedIn"),
-    message: formData.get("message"),
-  });
+  try {
+    const validatedFields = inquirySchema.safeParse({
+      firstName: formData.get("firstName"),
+      lastName: formData.get("lastName"),
+      email: formData.get("email"),
+      interestedIn: formData.get("interestedIn"),
+      message: formData.get("message"),
+    });
 
-  if (!validatedFields.success) {
+    if (!validatedFields.success) {
+      return {
+        success: false,
+        message: "Please review the highlighted fields before sending your inquiry.",
+        fieldErrors: validatedFields.error.flatten().fieldErrors as Partial<
+          Record<string, string[]>
+        >,
+      };
+    }
+
+    const now = new Date().toISOString();
+    const inquiry = {
+      ...validatedFields.data,
+      id: `EKI-${now.slice(0, 10).replace(/-/g, "")}-${randomUUID().slice(0, 8).toUpperCase()}`,
+      fullName: `${validatedFields.data.firstName} ${validatedFields.data.lastName}`.trim(),
+      status: "pending" as const,
+      submittedAt: now,
+      updatedAt: now,
+    };
+    const emailResult = await sendInquiryEmail(inquiry);
+
+    return {
+      success: true,
+      message: "Thank you for contacting us. Please check your email.",
+      inquiryId: inquiry.id,
+      emailMode: emailResult.mode,
+      previewPath:
+        emailResult.mode === "preview" ? emailResult.previewDirectory : undefined,
+    };
+  } catch {
     return {
       success: false,
-      message: "Please review the highlighted fields before sending your inquiry.",
-      fieldErrors: validatedFields.error.flatten().fieldErrors as Partial<
-        Record<string, string[]>
-      >,
+      message:
+        "We could not send your inquiry right now. Please try again in a moment.",
     };
   }
-
-  const now = new Date().toISOString();
-  const inquiry = {
-    ...validatedFields.data,
-    id: `EKI-${now.slice(0, 10).replace(/-/g, "")}-${randomUUID().slice(0, 8).toUpperCase()}`,
-    fullName: `${validatedFields.data.firstName} ${validatedFields.data.lastName}`.trim(),
-    status: "pending" as const,
-    submittedAt: now,
-    updatedAt: now,
-  };
-  const emailResult = await sendInquiryEmail(inquiry);
-
-  return {
-    success: true,
-    message: "Thank you for contacting us. Please check your email.",
-    inquiryId: inquiry.id,
-    emailMode: emailResult.mode,
-    previewPath:
-      emailResult.mode === "preview" ? emailResult.previewDirectory : undefined,
-  };
 }

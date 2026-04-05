@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 
 import { CONTACT_WHATSAPP, CONTACT_WHATSAPP_URL } from "@/lib/contact";
@@ -50,30 +51,34 @@ export async function sendReservationWhatsappNotification(
       Body: message,
     });
 
-    const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
+    try {
+      const response = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body,
         },
-        body,
-      },
-    );
+      );
 
-    if (!response.ok) {
-      throw new Error("Twilio WhatsApp notification failed.");
+      if (!response.ok) {
+        throw new Error("Twilio WhatsApp notification failed.");
+      }
+
+      return {
+        delivered: true,
+        mode: "webhook",
+      };
+    } catch {
+      // Fall through to preview/manual mode so booking completion is never blocked.
     }
-
-    return {
-      delivered: true,
-      mode: "webhook",
-    };
   }
 
   if (!webhookUrl) {
-    const dir = path.join(process.cwd(), "data", "whatsapp-previews");
+    const dir = path.join(os.tmpdir(), "ekeon-previews", "whatsapp-previews");
     await fs.mkdir(dir, { recursive: true });
 
     const previewPath = path.join(dir, `${reservation.id}.txt`);
@@ -91,20 +96,43 @@ export async function sendReservationWhatsappNotification(
     };
   }
 
-  await fetch(webhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      to: process.env.WHATSAPP_NOTIFICATION_TO ?? CONTACT_WHATSAPP,
-      message,
-      reservationId: reservation.id,
-    }),
-  });
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: process.env.WHATSAPP_NOTIFICATION_TO ?? CONTACT_WHATSAPP,
+        message,
+        reservationId: reservation.id,
+      }),
+    });
 
-  return {
-    delivered: true,
-    mode: "webhook",
-  };
+    if (!response.ok) {
+      throw new Error("Webhook WhatsApp notification failed.");
+    }
+
+    return {
+      delivered: true,
+      mode: "webhook",
+    };
+  } catch {
+    const dir = path.join(os.tmpdir(), "ekeon-previews", "whatsapp-previews");
+    await fs.mkdir(dir, { recursive: true });
+
+    const previewPath = path.join(dir, `${reservation.id}.txt`);
+    await fs.writeFile(
+      previewPath,
+      `To: ${CONTACT_WHATSAPP}\n\n${message}`,
+      "utf8",
+    );
+
+    return {
+      delivered: false,
+      mode: "preview",
+      previewPath,
+      manualUrl: buildBusinessWhatsappUrl(reservation),
+    };
+  }
 }
