@@ -32,42 +32,50 @@ export async function sendArchiveExportEmailAction(
   _prevState: ArchiveExportActionState,
   formData: FormData,
 ): Promise<ArchiveExportActionState> {
-  const currentUser = await requireAdminUser();
-  const search = typeof formData.get("search") === "string"
-    ? String(formData.get("search"))
-    : "";
-  const status = normalizeStatus(formData.get("status"));
+  try {
+    const currentUser = await requireAdminUser();
+    const search = typeof formData.get("search") === "string"
+      ? String(formData.get("search"))
+      : "";
+    const status = normalizeStatus(formData.get("status"));
 
-  const reservations = await readReservations();
-  const filteredReservations = filterArchivedReservations(reservations, {
-    search,
-    status,
-  });
+    const reservations = await readReservations();
+    const filteredReservations = filterArchivedReservations(reservations, {
+      search,
+      status,
+    });
 
-  if (filteredReservations.length === 0) {
+    if (filteredReservations.length === 0) {
+      return {
+        success: false,
+        message: "No archived reservations match the current filters.",
+      };
+    }
+
+    const filename = buildArchiveExportFilename({ search, status });
+    const csvContent = buildArchivedReservationsCsv(filteredReservations);
+    const emailResult = await sendArchivedReservationsExportEmail({
+      csvContent,
+      filename,
+      totalRecords: filteredReservations.length,
+      requestedByName: currentUser.name,
+      requestedByEmail: currentUser.email,
+      search,
+      status,
+    });
+
+    return {
+      success: true,
+      message:
+        emailResult.mode === "smtp"
+          ? `CSV export sent to the company inbox with ${filteredReservations.length} archived reservation(s).`
+          : `Email delivery was unavailable, so a preview export was saved safely for ${filteredReservations.length} archived reservation(s).`,
+    };
+  } catch {
     return {
       success: false,
-      message: "No archived reservations match the current filters.",
+      message:
+        "We could not send the archive export right now. Please try again in a moment.",
     };
   }
-
-  const filename = buildArchiveExportFilename({ search, status });
-  const csvContent = buildArchivedReservationsCsv(filteredReservations);
-  const emailResult = await sendArchivedReservationsExportEmail({
-    csvContent,
-    filename,
-    totalRecords: filteredReservations.length,
-    requestedByName: currentUser.name,
-    requestedByEmail: currentUser.email,
-    search,
-    status,
-  });
-
-  return {
-    success: true,
-    message:
-      emailResult.mode === "smtp"
-        ? `CSV export sent to the company inbox with ${filteredReservations.length} archived reservation(s).`
-        : `SMTP is not configured. A preview export was saved locally instead for ${filteredReservations.length} archived reservation(s).`,
-  };
 }

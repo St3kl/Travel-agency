@@ -31,40 +31,48 @@ export async function submitPartnerInquiry(
   _prevState: PartnerInquiryFormState,
   formData: FormData,
 ): Promise<PartnerInquiryFormState> {
-  const validatedFields = partnerInquirySchema.safeParse({
-    companyName: formData.get("companyName"),
-    contactPerson: formData.get("contactPerson"),
-    email: formData.get("email"),
-    primaryDestination: formData.get("primaryDestination"),
-    whatsapp: formData.get("whatsapp"),
-    message: formData.get("message"),
-  });
+  try {
+    const validatedFields = partnerInquirySchema.safeParse({
+      companyName: formData.get("companyName"),
+      contactPerson: formData.get("contactPerson"),
+      email: formData.get("email"),
+      primaryDestination: formData.get("primaryDestination"),
+      whatsapp: formData.get("whatsapp"),
+      message: formData.get("message"),
+    });
 
-  if (!validatedFields.success) {
+    if (!validatedFields.success) {
+      return {
+        success: false,
+        message:
+          "Please review the highlighted fields before sending your partnership inquiry.",
+        fieldErrors: validatedFields.error.flatten().fieldErrors as Partial<
+          Record<string, string[]>
+        >,
+      };
+    }
+
+    const inquiry = {
+      id: buildPartnerInquiryId(),
+      submittedAt: new Date().toISOString(),
+      ...validatedFields.data,
+    };
+
+    const emailResult = await sendPartnerInquiryEmail(inquiry);
+
+    return {
+      success: true,
+      message: "Thank you for your interest in partnering with us. Please check your email.",
+      inquiryId: inquiry.id,
+      emailMode: emailResult.mode,
+      previewPath:
+        emailResult.mode === "preview" ? emailResult.previewDirectory : undefined,
+    };
+  } catch {
     return {
       success: false,
       message:
-        "Please review the highlighted fields before sending your partnership inquiry.",
-      fieldErrors: validatedFields.error.flatten().fieldErrors as Partial<
-        Record<string, string[]>
-      >,
+        "We could not send your partnership inquiry right now. Please try again in a moment.",
     };
   }
-
-  const inquiry = {
-    id: buildPartnerInquiryId(),
-    submittedAt: new Date().toISOString(),
-    ...validatedFields.data,
-  };
-
-  const emailResult = await sendPartnerInquiryEmail(inquiry);
-
-  return {
-    success: true,
-    message: "Thank you for your interest in partnering with us. Please check your email.",
-    inquiryId: inquiry.id,
-    emailMode: emailResult.mode,
-    previewPath:
-      emailResult.mode === "preview" ? emailResult.previewDirectory : undefined,
-  };
 }
